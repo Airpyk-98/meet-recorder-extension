@@ -1,0 +1,41 @@
+name: Google Meet Recording Bot
+
+on:
+  workflow_dispatch:
+    inputs:
+      meet_url:
+        description: 'Google Meet URL to record'
+        required: true
+
+jobs:
+  record:
+    runs-on: ubuntu-latest
+    timeout-minutes: 360 # GitHub allows up to 6 hours (360 minutes)
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '18'
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y xvfb fluxbox x11vnc ffmpeg
+          cd hf-backend
+          npm install
+
+      - name: Run Recording Bot
+        env:
+          HF_TOKEN: ${{ secrets.EPIC98_HF_TOKEN }}
+        run: |
+          cd hf-backend
+          mkdir -p record_output
+          # Run the puppeteer script inside a virtual framebuffer (xvfb)
+          xvfb-run --server-args="-screen 0 1280x720x24" node recorder.js "${{ github.event.inputs.meet_url }}" "record_output"
+          
+          # After recording finishes, upload to Hugging Face
+          node upload.js "record_output" "${{ github.run_id }}"

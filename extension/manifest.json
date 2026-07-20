@@ -8,7 +8,8 @@
     "storage"
   ],
   "host_permissions": [
-    "https://*.huggingface.co/*"
+    "https://*.huggingface.co/*",
+    "https://api.github.com/*"
   ],
   "action": {
     "default_popup": "popup.html",

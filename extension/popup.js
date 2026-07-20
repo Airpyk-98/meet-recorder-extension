@@ -4,21 +4,21 @@ document.addEventListener('DOMContentLoaded', () => {
     const statusText = document.getElementById('status-text');
     const statusContainer = document.getElementById('status-container');
     const recordingDot = document.querySelector('.recording-dot');
-    const hfUrlInput = document.getElementById('hf-url');
+    const ghTokenInput = document.getElementById('gh-token');
 
-    // Load saved API URL
-    chrome.storage.local.get(['hfSpaceUrl', 'isRecording', 'currentMeetingId'], (result) => {
-        if (result.hfSpaceUrl) {
-            hfUrlInput.value = result.hfSpaceUrl;
+    // Load saved API Token
+    chrome.storage.local.get(['ghToken', 'isRecording'], (result) => {
+        if (result.ghToken) {
+            ghTokenInput.value = result.ghToken;
         }
         if (result.isRecording) {
-            setRecordingUI(true, result.currentMeetingId);
+            setRecordingUI(true);
         }
     });
 
-    // Save API URL on change
-    hfUrlInput.addEventListener('change', (e) => {
-        chrome.storage.local.set({ hfSpaceUrl: e.target.value });
+    // Save Token on change
+    ghTokenInput.addEventListener('change', (e) => {
+        chrome.storage.local.set({ ghToken: e.target.value });
     });
 
     // Open Dashboard
@@ -28,16 +28,18 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Handle Record Button
     recordBtn.addEventListener('click', async () => {
-        const apiUrl = hfUrlInput.value.trim();
-        if (!apiUrl) {
-            alert('Please enter your Hugging Face Space URL first.');
+        const ghToken = ghTokenInput.value.trim();
+        if (!ghToken) {
+            alert('Please enter your GitHub Personal Access Token first.');
             return;
         }
 
-        chrome.storage.local.get(['isRecording', 'currentMeetingId'], async (result) => {
+        chrome.storage.local.get(['isRecording'], async (result) => {
             if (result.isRecording) {
-                // Stop recording
-                await stopRecording(apiUrl, result.currentMeetingId);
+                // Stop recording (with GitHub actions, you'd typically cancel the workflow run)
+                // For simplicity, we just reset the UI here. The action auto-terminates after 6h or when empty.
+                chrome.storage.local.set({ isRecording: false });
+                setRecordingUI(false);
             } else {
                 // Start recording
                 chrome.tabs.query({ active: true, currentWindow: true }, async (tabs) => {
@@ -46,33 +48,33 @@ document.addEventListener('DOMContentLoaded', () => {
                         alert('Please navigate to a Google Meet tab first!');
                         return;
                     }
-                    await startRecording(apiUrl, currentTab.url);
+                    await startRecording(ghToken, currentTab.url);
                 });
             }
         });
     });
 
-    async function startRecording(apiUrl, meetUrl) {
-        statusText.innerText = 'Connecting to Cloud Bot...';
+    async function startRecording(ghToken, meetUrl) {
+        statusText.innerText = 'Dispatching GitHub Action...';
         recordBtn.disabled = true;
 
         try {
-            const response = await fetch(`${apiUrl}/api/record`, {
+            const response = await fetch(`https://api.github.com/repos/Airpyk-98/meet-recorder-extension/actions/workflows/record.yml/dispatches`, {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ meetUrl })
+                headers: { 
+                    'Accept': 'application/vnd.github.v3+json',
+                    'Authorization': `token ${ghToken}`,
+                    'Content-Type': 'application/json' 
+                },
+                body: JSON.stringify({ ref: 'main', inputs: { meet_url: meetUrl } })
             });
 
-            const data = await response.json();
-
-            if (response.ok) {
-                chrome.storage.local.set({ 
-                    isRecording: true, 
-                    currentMeetingId: data.meetingId 
-                });
-                setRecordingUI(true, data.meetingId);
+            if (response.ok || response.status === 204) {
+                chrome.storage.local.set({ isRecording: true });
+                setRecordingUI(true);
             } else {
-                throw new Error(data.error || 'Failed to start recording');
+                const data = await response.json();
+                throw new Error(data.message || 'Failed to dispatch workflow');
             }
         } catch (error) {
             alert(`Error: ${error.message}`);
@@ -82,40 +84,15 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    async function stopRecording(apiUrl, meetingId) {
-        statusText.innerText = 'Stopping Bot...';
-        recordBtn.disabled = true;
-
-        try {
-            const response = await fetch(`${apiUrl}/api/stop`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ meetingId })
-            });
-
-            if (response.ok) {
-                chrome.storage.local.set({ isRecording: false, currentMeetingId: null });
-                setRecordingUI(false);
-            } else {
-                const data = await response.json();
-                throw new Error(data.error || 'Failed to stop recording');
-            }
-        } catch (error) {
-            alert(`Error: ${error.message}`);
-        } finally {
-            recordBtn.disabled = false;
-        }
-    }
-
-    function setRecordingUI(isRecording, meetingId = '') {
+    function setRecordingUI(isRecording) {
         if (isRecording) {
             statusContainer.className = 'status recording';
-            statusText.innerText = `Recording Meet ID: ${meetingId}`;
+            statusText.innerText = `Recording Active on GitHub...`;
             recordBtn.innerHTML = `
                 <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                     <rect x="6" y="6" width="12" height="12"></rect>
                 </svg>
-                Stop Recording
+                Reset UI
             `;
             recordBtn.classList.add('recording');
             recordingDot.classList.add('active');
