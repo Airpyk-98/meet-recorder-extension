@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MeetRecorder AI - Dashboard</title>
+    <link rel="stylesheet" href="styles.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body class="dashboard-body">
+    <div class="glass-container">
+        <header class="dashboard-header">
+            <div class="logo">
+                <div class="recording-dot"></div>
+                <h1>MeetRecorder AI Dashboard</h1>
+            </div>
+            
+            <div class="settings" style="margin-top: 0; min-width: 300px;">
+                <input type="text" id="hf-token" placeholder="Enter Hugging Face Token (EPIC98 token) to view recordings" />
+            </div>
+        </header>
+
+        <main>
+            <div id="loading" class="status idle" style="display: none;">
+                <span class="loader"></span>
+                <p>Fetching recordings from Hugging Face Datasets...</p>
+            </div>
+
+            <div id="error-msg" class="status recording" style="display: none;">
+                <span id="error-text"></span>
+            </div>
+
+            <div class="dataset-grid" id="dataset-grid">
+                <!-- Record cards will be dynamically injected here -->
+            </div>
+        </main>
+    </div>
+    <script src="dashboard.js"></script>
+</body>
+</html>

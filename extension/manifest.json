@@ -1,0 +1,20 @@
+{
+  "manifest_version": 3,
+  "name": "MeetRecorder AI",
+  "version": "1.0",
+  "description": "Cloud-based Google Meet recorder using Hugging Face Spaces.",
+  "permissions": [
+    "activeTab",
+    "storage"
+  ],
+  "host_permissions": [
+    "https://*.huggingface.co/*"
+  ],
+  "action": {
+    "default_popup": "popup.html",
+    "default_icon": "icon.png"
+  },
+  "background": {
+    "service_worker": "background.js"
+  }
+}
